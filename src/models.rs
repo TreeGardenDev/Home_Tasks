@@ -126,7 +126,7 @@ impl NewList {
         owner -> Varchar,
 */
 
-#[derive(Queryable, Selectable,Debug)]
+#[derive(Queryable, Selectable,Debug,AsChangeset)]
 #[diesel(table_name = items)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Item{
@@ -139,3 +139,31 @@ pub struct Item{
     pub required: Option<bool>,
     pub list_id: Option<i32>,
 }
+
+#[derive(Insertable,Selectable,Debug,AsChangeset)]
+#[diesel(table_name = items)]
+pub struct NewItem{
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: Option<SystemTime>,
+    pub updated_at: Option<SystemTime>,
+    pub completed: Option<bool>,
+    pub required: Option<bool>,
+    pub list_id: Option<i32>,
+}
+impl NewItem {
+    pub fn new() -> NewItem {
+        NewItem {
+            name: String::new(),
+            description: None,
+            created_at: None,
+            updated_at: None,
+            completed: Some(false),
+            required: Some(false),
+            list_id: None
+        }
+    }
+}
+
+
+
