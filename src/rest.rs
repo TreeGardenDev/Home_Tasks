@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, Result};
+use actix_web::{cookie::Delta, web, App, HttpServer, Result};
 use serde::Deserialize;
 use crate::db;
 //system time
@@ -7,13 +7,17 @@ use std::time::SystemTime;
 
 #[derive(Deserialize)]
 pub struct PostList{
-    title: String,
+    title: String
 }
 
 #[derive(Deserialize)]
 pub struct PostItem {
     title: String,
     name: String
+}
+#[derive(Deserialize,Clone)]
+pub struct DeleteItem {
+    item_id: i32
 }
 
 pub async fn create_list(post_list: web::Json<PostList>) -> Result<String> {
@@ -37,15 +41,16 @@ pub async fn create_item(post_item: web::Json<PostItem>) -> Result<String> {
     Ok(format!("Item '{}' created in list '{}'", post_item.title, post_item.name))
 }
 
-pub async fn delete_item(item_id: web::Path<i32>) -> Result<String> {
-    let id=item_id.clone();
-    let _ = db::delete_item(item_id.into_inner());
+pub async fn delete_item(item: web::Json<DeleteItem>) -> Result<String> {
+    let id=item.item_id.clone();
+    let _ = db::delete_item(item.item_id);
     Ok(format!("Item with ID {} deleted", id))
 }
-pub async fn delete_multiple_items(item_ids: web::Json<Vec<i32>>) -> Result<String> {
+pub async fn delete_multiple_items(item_ids: web::Json<Vec<DeleteItem>>) -> Result<String> {
     let ids= item_ids.clone();
-    let _ = db::delete_multiple_items(item_ids.into_inner());
-    Ok(format!("Items with IDs {:?} deleted", ids))
+    let storeid= item_ids.iter().map(|item| item.item_id).collect::<Vec<i32>>();
+    let _ = db::delete_multiple_items(storeid);
+    Ok(format!("Items with IDs {:?} deleted", ids.iter().map(|item| item.item_id).collect::<Vec<i32>>()))
 }
 pub async fn complete_item(item_id: web::Path<i32>) -> Result<String> {
     let id = item_id.clone();
