@@ -1,43 +1,36 @@
 mod models;
 mod utils;
 mod db;
+mod rest;
 use diesel::prelude::*;
 use std::time::SystemTime;
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
-
-fn main() {
-    let mut _con = utils::establish_connection();   
-    //let method=String::from("create_list");
-    let method=String::from("complete_list");
-    //let mut new_list = models::NewList::new();
-    if method=="create_list"{
-        let current_time = SystemTime::now();
-        let new_list = db::build_list("Test List".to_string(), current_time, current_time);
-        //let insert_list = db::create_list(&new_list);
-        let _= db::create_list(&new_list);
-    }
-    if method=="create_item"{
-        let current_time = SystemTime::now();
-        let new_item = db::build_item("Test List".to_string(),"Test Item 4".to_string(), current_time);
-        let _= db::create_item(&new_item);
-        if new_item.list_id.is_some(){
-            db::increase_item_count(new_item.list_id.unwrap());
-        }
-        
-    }
-    if method=="delete_item"{
-        let _= db::delete_item(1);
-    }
-    if method=="complete_item"{
-        let _= db::complete_item(4);
-    }
-    if method=="complete_list"{
-        let _= db::complete_list(2);
-    }
-
-        
-    
-    //let listitem= db::ListItem::new("Test List".to_string());
-    
-    //println!("{:?}", listitem);
+#[get("/")]
+async fn hello() -> impl Responder {
+    HttpResponse::Ok().body("Hello world!")
 }
+
+async fn manual_hello() -> impl Responder {
+    HttpResponse::Ok().body("Hey there!")
+}
+
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(hello)
+            .route("/hey", web::get().to(manual_hello))
+            .route("/create_list", web::post().to(rest::create_list))
+            .route("/create_item", web::post().to(rest::create_item))
+            .route("/delete_item", web::post().to(rest::delete_item))
+            .route("/delete_multi_item", web::post().to(rest::delete_multiple_items))
+            .route("/complete_item/{item_id}", web::post().to(rest::complete_item))
+            .route("/complete_list/{list_id}", web::post().to(rest::complete_list))
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
+}
+
