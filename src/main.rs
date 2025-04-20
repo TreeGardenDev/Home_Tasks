@@ -8,7 +8,7 @@ use std::time::SystemTime;
 fn main() {
     let mut _con = utils::establish_connection();   
     //let method=String::from("create_list");
-    let method=String::from("create_item");
+    let method=String::from("complete_list");
     //let mut new_list = models::NewList::new();
     if method=="create_list"{
         let current_time = SystemTime::now();
@@ -25,8 +25,19 @@ fn main() {
         }
         
     }
+    if method=="delete_item"{
+        let _= db::delete_item(1);
+    }
+    if method=="complete_item"{
+        let _= db::complete_item(4);
+    }
+    if method=="complete_list"{
+        let _= db::complete_list(2);
+    }
+
+        
     
-    let listitem= db::ListItem::new("Test List".to_string());
+    //let listitem= db::ListItem::new("Test List".to_string());
     
-    println!("{:?}", listitem);
+    //println!("{:?}", listitem);
 }
