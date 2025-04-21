@@ -11,7 +11,8 @@ use std::time::SystemTime;
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ,
   due_date TIMESTAMP,
   number_of_items INTEGER DEFAULT 0,y
-  owner VARCHAR(255)
+  owner VARCHAR(255),
+  parent_item_id INTEGER REFERENCES items(id) ON DELETE CASCADE
 );
 
 CREATE TABLE items (
@@ -22,7 +23,8 @@ CREATE TABLE items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed BOOLEAN DEFAULT FALSE,
     required BOOLEAN DEFAULT FALSE,
-    list_id INTEGER REFERENCES lists(id) ON DELETE CASCADE
+    list_id INTEGER REFERENCES lists(id) ON DELETE CASCADE,
+    child_list_id INTEGER REFERENCES lists(id) ON DELETE CASCADE
 );
 */
 
@@ -38,6 +40,7 @@ diesel::table! {
         completed -> Nullable<Bool>,
         required -> Nullable<Bool>,
         list_id -> Nullable<Int4>,
+        child_list_id -> Nullable<Int4>,
     }
 }
 
@@ -52,6 +55,7 @@ diesel::table! {
         number_of_items -> Nullable<Int4>,
         #[max_length = 255]
         owner -> Nullable<Varchar>,
+        parent_item_id -> Nullable<Int4>,
     }
 }
 
@@ -85,7 +89,8 @@ pub struct List{
     pub updated_at: Option<SystemTime>,
     pub due_date: Option<SystemTime>,
     pub number_of_items: Option<i32>,
-    pub owner: Option<String>
+    pub owner: Option<String>,
+    pub parent_item_id: Option<i32>
 }
 
 #[derive(Insertable, Debug)]
@@ -99,6 +104,7 @@ pub struct NewList{
     pub due_date: Option<SystemTime>,
     pub number_of_items: i32,
     pub owner: Option<String>,
+    pub parent_item_id: Option<i32>
 }
 impl NewList {
     pub fn new() -> NewList {
@@ -109,6 +115,7 @@ impl NewList {
             updated_at: None,
             due_date: None,
             number_of_items: 0,
+            parent_item_id: None,
             owner: None
         }
     }
@@ -138,6 +145,7 @@ pub struct Item{
     pub completed: Option<bool>,
     pub required: Option<bool>,
     pub list_id: Option<i32>,
+    pub child_list_id: Option<i32>,
 }
 
 #[derive(Insertable,Selectable,Debug,AsChangeset)]
@@ -150,6 +158,7 @@ pub struct NewItem{
     pub completed: Option<bool>,
     pub required: Option<bool>,
     pub list_id: Option<i32>,
+    pub child_list_id: Option<i32>,
 }
 impl NewItem {
     pub fn new() -> NewItem {
@@ -160,7 +169,8 @@ impl NewItem {
             updated_at: None,
             completed: Some(false),
             required: Some(false),
-            list_id: None
+            list_id: None,
+            child_list_id: None,
         }
     }
 }

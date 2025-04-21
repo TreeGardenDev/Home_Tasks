@@ -7,13 +7,15 @@ use std::time::SystemTime;
 
 #[derive(Deserialize)]
 pub struct PostList{
-    title: String
+    title: String,
+    parent_item_id: Option<i32>
 }
 
 #[derive(Deserialize)]
 pub struct PostItem {
     title: String,
-    name: String
+    name: String,
+    child_list_id: Option<i32>
 }
 #[derive(Deserialize,Clone)]
 pub struct DeleteItem {
@@ -22,22 +24,36 @@ pub struct DeleteItem {
 
 pub async fn create_list(post_list: web::Json<PostList>) -> Result<String> {
     let current_time = std::time::SystemTime::now();
-    let new_list = db::build_list(post_list.title.clone(),  current_time, current_time);
+    let mut parent_item:Option<i32>=None;
+    let parent_item_id = post_list.parent_item_id.clone();
+    let mut child =false;
+    if post_list.parent_item_id.is_some() {
+        parent_item = post_list.parent_item_id.clone();
+        child = true;
+    }
+    let new_list = db::build_list(post_list.title.clone(),  current_time, current_time,parent_item);
     let _ = db::create_list(&new_list);
-    // Here you would typically insert the list into the database
+    if child {
+        let listid = db::get_listid_by_title(post_list.title.clone());
+        let _ = db::add_child_list(parent_item_id.unwrap(), listid);
+    }
+
     Ok(format!("List '{}'", post_list.title))
 }
 
 pub async fn create_item(post_item: web::Json<PostItem>) -> Result<String> {
     let current_time = std::time::SystemTime::now();
-    let new_item = db::build_item(post_item.title.clone(), post_item.name.clone(),   current_time);
+    let mut child_list_id:Option<i32> = None;
+    if post_item.child_list_id.is_some() {
+        child_list_id = post_item.child_list_id.clone();
+    }
+    let new_item = db::build_item(post_item.title.clone(), post_item.name.clone(),   current_time, child_list_id);
     let listid = db::get_listid_by_title(post_item.title.clone());
     if new_item.list_id.is_none() {
         return Ok(format!("List with title '{}' not found", post_item.title));
     }
     let _= db::increase_item_count(listid);
     let _ = db::create_item(&new_item);
-    // Here you would typically insert the item into the database
     Ok(format!("Item '{}' created in list '{}'", post_item.title, post_item.name))
 }
 
