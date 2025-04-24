@@ -1,7 +1,6 @@
 use crate::models;
-use crate::models::items::{self, child_list_id};
 use crate::utils;
-use diesel::dsl::{sql, sql_query};
+use diesel::dsl::{sql};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use serde::{Deserialize, Serialize};
@@ -90,22 +89,22 @@ pub fn get_item_by_listid(listid: i32) -> Vec<models::Item> {
         .expect("Error loading items");
     return items;
 }
-pub fn get_itemlist_by_listid(listid: i32) -> Vec<ItemList> {
+pub fn get_itemlist_by_listid(listid: i32) -> ItemListVec {
     let mut _con = utils::establish_connection();
     let items: Vec<models::Item> = models::items::table
         .filter(models::items::list_id.eq(listid))
         .load(&mut _con)
         .expect("Error loading items");
-    let mut itemlist: Vec<ItemList> = Vec::new();
-    for item in items.iter() {
-        let mut itemlist_item = ItemList::from_item(item);
-        if item.child_list_id.is_some() {
-            let child_list = get_list_at_id(item.child_list_id.unwrap());
-            itemlist_item = itemlist_item.with_child_list(child_list);
-        }
-        itemlist.push(itemlist_item);
-    }
-    return itemlist;
+    let itemvec = ItemListVec::build(items);
+    //for item in items.iter() {
+    //    let mut itemlist_item = ItemList::from_item(item);
+    //    if item.child_list_id.is_some() {
+    //        let child_list = get_list_at_id(item.child_list_id.unwrap());
+    //        itemlist_item = itemlist_item.with_child_list(child_list);
+    //    }
+    //    itemlist.push(itemlist_item);
+    //}
+    return itemvec;
 }
 pub fn get_item_query(title: String) -> Vec<models::Item> {
     let mut _con = utils::establish_connection();
@@ -231,8 +230,8 @@ pub fn get_list_at_id(listid: i32) -> ListItem {
         .filter(models::lists::id.eq(listid))
         .first(&mut _con)
         .expect("Error loading list");
-    let mut querylist = ListItem {
-        list: list,
+    let querylist = ListItem {
+        list,
         items: get_itemlist_by_listid(listid),
     };
     return querylist;
@@ -241,25 +240,20 @@ pub fn get_list_at_id(listid: i32) -> ListItem {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListItem {
     pub list: models::List,
-    pub items: Vec<ItemList>,
+    pub items: ItemListVec,
 }
 impl ListItem {
     pub fn new(title: String) -> ListItem {
         let tit2 = title.clone();
         //let items:Vec<models::Item> = get_item_by_listid(get_listid_by_title(title));
-        let mut itemlist: Vec<ItemList> = Vec::new();
         let items: Vec<models::Item> = get_item_query(title);
-        for item in items.iter() {
-                  
-            let mut itemlist_item = ItemList::from_item(item);
-            if item.child_list_id.is_some() {
-                let child_list = get_list_at_id(item.child_list_id.unwrap());
-                itemlist_item = itemlist_item.with_child_list(child_list);
-            }
-            itemlist.push(itemlist_item);
-        }
+        let itemlistvec= ItemListVec::build(items);
         let list = get_list_by_title(tit2);
-        ListItem { list, items:itemlist}
+        
+        ListItem {
+            list,
+            items: itemlistvec,
+        }
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -276,7 +270,7 @@ pub struct ItemList {
     pub parent_item_id: Option<i32>,
     pub child_list: Option<ListItem>,
 }
-impl ItemList{
+impl ItemList {
     pub fn new() -> ItemList {
         ItemList {
             id: 0,
@@ -309,4 +303,30 @@ impl ItemList{
         self.child_list = Some(child_list);
         self
     }
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ItemListVec {
+    pub items: Vec<ItemList>,
+}
+impl ItemListVec {
+    pub fn new() -> ItemListVec {
+        ItemListVec { items: Vec::new() }
+    }
+    pub fn build(items: Vec<models::Item>) -> ItemListVec {
+        let mut itemlist = ItemListVec::new();
+        for item in items.iter() {
+            let mut itemlist_item = ItemList::from_item(item);
+            if item.child_list_id.is_some() {
+                let child_list = get_list_at_id(item.child_list_id.unwrap());
+                itemlist_item = itemlist_item.with_child_list(child_list);
+            }
+            itemlist.items.push(itemlist_item);
+        }
+        itemlist
+    }
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ItemQuery {
+    pub title: String,
+    pub items: ItemListVec,
 }
