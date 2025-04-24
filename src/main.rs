@@ -2,9 +2,9 @@ mod models;
 mod utils;
 mod db;
 mod rest;
-use diesel::prelude::*;
-use std::time::SystemTime;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+//use diesel::prelude::*;
+//use std::time::SystemTime;
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
 #[get("/")]
 async fn hello() -> impl Responder {

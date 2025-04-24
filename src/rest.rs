@@ -1,10 +1,10 @@
-use actix_web::HttpRequest;
-use actix_web::{cookie::Delta, web, App, HttpServer, Result, HttpResponse};
+//use actix_web::HttpRequest;
+use actix_web::{web, Result, HttpResponse};
 use serde::Deserialize;
 use crate::db;
-use crate::models;
+//use crate::models;
 //system time
-use std::time::SystemTime;
+//use std::time::SystemTime;
 use actix_web_lab::extract::Path;
 
 
@@ -81,7 +81,7 @@ pub async fn complete_list(list_id: web::Path<i32>) -> Result<String> {
     let _ = db::complete_list(list_id.into_inner());
     Ok(format!("List with ID {} completed", id))
 }
-pub async fn query_at_node(req: HttpRequest, Path((list_id,)):Path<(i32,)>) -> HttpResponse {
+pub async fn query_at_node(Path((list_id,)):Path<(i32,)>) -> HttpResponse {
     // Start query at list that has list id of list_id
 
     let list=db::get_list_at_id(list_id.clone());

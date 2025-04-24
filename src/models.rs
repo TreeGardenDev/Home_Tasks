@@ -94,6 +94,21 @@ pub struct List{
     pub owner: Option<String>,
     pub parent_item_id: Option<i32>
 }
+impl List {
+    pub fn new() -> List {
+        List {
+            id: 0,
+            title: None,
+            completed: Some(false),
+            created_at: None,
+            updated_at: None,
+            due_date: None,
+            number_of_items: Some(0),
+            owner: None,
+            parent_item_id: None
+        }
+    }
+}
 
 #[derive(Insertable, Debug, Deserialize)]
 #[diesel(table_name=lists)]
