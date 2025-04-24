@@ -1,5 +1,7 @@
 use diesel::prelude::*;
+use serde::Deserialize;
 use std::time::SystemTime;
+use serde::Serialize;
 
 /*
   Sql Statements
@@ -78,7 +80,7 @@ diesel::allow_tables_to_appear_in_same_query!(
         #[max_length = 255]
         owner -> Varchar
 */
-#[derive(Queryable, Selectable,Debug)]
+#[derive(Queryable, Selectable,Debug, Deserialize, Serialize)]
 #[diesel(table_name = lists)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct List{
@@ -93,7 +95,7 @@ pub struct List{
     pub parent_item_id: Option<i32>
 }
 
-#[derive(Insertable, Debug)]
+#[derive(Insertable, Debug, Deserialize)]
 #[diesel(table_name=lists)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewList{
@@ -133,7 +135,7 @@ impl NewList {
         owner -> Varchar,
 */
 
-#[derive(Queryable, Selectable,Debug,AsChangeset)]
+#[derive(Queryable, Selectable,Debug,AsChangeset,Deserialize, Serialize)]
 #[diesel(table_name = items)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Item{
@@ -148,7 +150,7 @@ pub struct Item{
     pub child_list_id: Option<i32>,
 }
 
-#[derive(Insertable,Selectable,Debug,AsChangeset)]
+#[derive(Insertable,Selectable,Debug,AsChangeset,Deserialize, Serialize)]
 #[diesel(table_name = items)]
 pub struct NewItem{
     pub name: String,

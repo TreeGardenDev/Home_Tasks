@@ -4,6 +4,7 @@ use crate::utils;
 use diesel::dsl::{sql, sql_query};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
+use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
 pub fn build_list(
@@ -32,14 +33,14 @@ pub fn build_item(
     title: String,
     name: String,
     datetime: SystemTime,
-    other_child_list_id: Option<i32>
+    other_child_list_id: Option<i32>,
 ) -> models::NewItem {
     let mut new_item = models::NewItem::new();
     new_item.name = name;
     new_item.created_at = Some(datetime);
     new_item.updated_at = Some(datetime);
     new_item.list_id = Some(get_listid_by_title(title));
-    new_item.child_list_id = other_child_list_id; 
+    new_item.child_list_id = other_child_list_id;
     new_item
 }
 
@@ -51,10 +52,7 @@ pub fn create_item(new_item: &models::NewItem) -> models::Item {
         .get_result(&mut _con)
         .expect("Error saving new item")
 }
-pub fn add_child_list(
-    itemid: i32,
-    other_child_list_id: i32,
-) -> models::Item {
+pub fn add_child_list(itemid: i32, other_child_list_id: i32) -> models::Item {
     let mut _con = utils::establish_connection();
     let item: models::Item = models::items::table
         .filter(models::items::id.eq(itemid))
@@ -91,6 +89,23 @@ pub fn get_item_by_listid(listid: i32) -> Vec<models::Item> {
         .load(&mut _con)
         .expect("Error loading items");
     return items;
+}
+pub fn get_itemlist_by_listid(listid: i32) -> Vec<ItemList> {
+    let mut _con = utils::establish_connection();
+    let items: Vec<models::Item> = models::items::table
+        .filter(models::items::list_id.eq(listid))
+        .load(&mut _con)
+        .expect("Error loading items");
+    let mut itemlist: Vec<ItemList> = Vec::new();
+    for item in items.iter() {
+        let mut itemlist_item = ItemList::from_item(item);
+        if item.child_list_id.is_some() {
+            let child_list = get_list_at_id(item.child_list_id.unwrap());
+            itemlist_item = itemlist_item.with_child_list(child_list);
+        }
+        itemlist.push(itemlist_item);
+    }
+    return itemlist;
 }
 pub fn get_item_query(title: String) -> Vec<models::Item> {
     let mut _con = utils::establish_connection();
@@ -210,18 +225,88 @@ pub fn get_all_lists() -> Vec<models::List> {
         .expect("Error loading lists");
     return lists;
 }
+pub fn get_list_at_id(listid: i32) -> ListItem {
+    let mut _con = utils::establish_connection();
+    let list: models::List = models::lists::table
+        .filter(models::lists::id.eq(listid))
+        .first(&mut _con)
+        .expect("Error loading list");
+    let mut querylist = ListItem {
+        list: list,
+        items: get_itemlist_by_listid(listid),
+    };
+    return querylist;
+}
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ListItem {
     pub list: models::List,
-    pub items: Vec<models::Item>,
+    pub items: Vec<ItemList>,
 }
 impl ListItem {
     pub fn new(title: String) -> ListItem {
         let tit2 = title.clone();
         //let items:Vec<models::Item> = get_item_by_listid(get_listid_by_title(title));
+        let mut itemlist: Vec<ItemList> = Vec::new();
         let items: Vec<models::Item> = get_item_query(title);
+        for item in items.iter() {
+                  
+            let mut itemlist_item = ItemList::from_item(item);
+            if item.child_list_id.is_some() {
+                let child_list = get_list_at_id(item.child_list_id.unwrap());
+                itemlist_item = itemlist_item.with_child_list(child_list);
+            }
+            itemlist.push(itemlist_item);
+        }
         let list = get_list_by_title(tit2);
-        ListItem { list, items }
+        ListItem { list, items:itemlist}
+    }
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ItemList {
+    //include all fields from models::Item
+    pub id: i32,
+    pub name: String,
+    pub list_id: Option<i32>,
+    pub child_list_id: Option<i32>,
+    pub created_at: Option<SystemTime>,
+    pub updated_at: Option<SystemTime>,
+    pub completed: bool,
+    pub required: bool,
+    pub parent_item_id: Option<i32>,
+    pub child_list: Option<ListItem>,
+}
+impl ItemList{
+    pub fn new() -> ItemList {
+        ItemList {
+            id: 0,
+            name: String::new(),
+            list_id: None,
+            child_list_id: None,
+            created_at: None,
+            updated_at: None,
+            completed: false,
+            required: false,
+            parent_item_id: None,
+            child_list: None,
+        }
+    }
+    pub fn from_item(item: &models::Item) -> ItemList {
+        ItemList {
+            id: item.id,
+            name: item.name.clone(),
+            list_id: item.list_id,
+            child_list_id: item.child_list_id,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            completed: item.completed.unwrap_or(false),
+            required: item.required.unwrap_or(false),
+            parent_item_id: Some(item.id),
+            child_list: None, // This will be set later if needed
+        }
+    }
+    pub fn with_child_list(mut self, child_list: ListItem) -> Self {
+        self.child_list = Some(child_list);
+        self
     }
 }
