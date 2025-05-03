@@ -1,6 +1,6 @@
 use crate::models;
 use crate::utils;
-use diesel::dsl::{sql};
+use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use serde::{Deserialize, Serialize};
@@ -236,6 +236,37 @@ pub fn get_list_at_id(listid: i32) -> ListItem {
     };
     return querylist;
 }
+pub fn update_item(
+    itemid: i32,
+    completed: bool,
+    required: bool,
+    delete: bool,
+) -> Result<(), String> {
+    if delete {
+        delete_item(itemid);
+        return Ok(());
+    }
+    let mut _con = utils::establish_connection();
+    let item: models::Item = models::items::table
+        .filter(models::items::id.eq(itemid))
+        .first(&mut _con)
+        .expect("Error loading item");
+
+    if completed {
+        complete_item(itemid);
+    } else {
+        diesel::update(models::items::table.find(itemid))
+            .set(models::items::completed.eq(completed))
+            .execute(&mut _con)
+            .expect("Error updating item");
+    }
+
+    if required {
+        change_item_required(itemid, required);
+    }
+
+    Ok(())
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListItem {
@@ -247,9 +278,9 @@ impl ListItem {
         let tit2 = title.clone();
         //let items:Vec<models::Item> = get_item_by_listid(get_listid_by_title(title));
         let items: Vec<models::Item> = get_item_query(title);
-        let itemlistvec= ItemListVec::build(items);
+        let itemlistvec = ItemListVec::build(items);
         let list = get_list_by_title(tit2);
-        
+
         ListItem {
             list,
             items: itemlistvec,
@@ -325,8 +356,43 @@ impl ItemListVec {
         itemlist
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ItemQuery {
-    pub title: String,
-    pub items: ItemListVec,
-}
+//#[derive(Debug, Serialize, Deserialize)]
+//pub struct ItemQuery {
+//    pub title: String,
+//    pub items: ItemListVec,
+//}
+//#[derive(Debug, Serialize, Deserialize)]
+//pub struct BulkUpdate {
+//    pub itemid: i32,
+//    pub completed: bool,
+//    pub required: bool,
+//    pub delete: bool,
+//}
+//impl BulkUpdate {
+//    pub fn new() -> BulkUpdate {
+//        BulkUpdate {
+//            itemid: 0,
+//            completed: false,
+//            required: false,
+//            delete: false,
+//        }
+//    }
+//    pub fn update_item(&mut self, itemid: i32, completed: bool, required: bool, delete: bool) {
+//        self.itemid = itemid;
+//        self.completed = completed;
+//        self.required = required;
+//        self.delete = delete;
+//    }
+//}
+//#[derive(Debug, Serialize, Deserialize)]
+//pub struct BulkUpdateTotal {
+//    pub items: Vec<BulkUpdate>,
+//}
+//impl BulkUpdateTotal {
+//    pub fn new() -> BulkUpdateTotal {
+//        BulkUpdateTotal { items: Vec::new() }
+//    }
+//    pub fn add_item(&mut self, item: BulkUpdate) {
+//        self.items.push(item);
+//    }
+//}
