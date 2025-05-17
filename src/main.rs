@@ -30,6 +30,7 @@ async fn main() -> std::io::Result<()> {
             .route("/complete_list/{list_id}", web::post().to(rest::complete_list))
             .route("/get_list/{list_id}", web::get().to(rest::query_at_node))
             .route("/update_items", web::post().to(rest::bulk_update))
+            .route("/get_all_lists/{active_only}", web::get().to(rest::get_all_lists))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

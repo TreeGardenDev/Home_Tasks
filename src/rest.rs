@@ -1,7 +1,7 @@
 //use actix_web::HttpRequest;
-use crate::db;
+use crate::{db, models};
 use actix_web::{HttpResponse, Result, web};
-use serde::Deserialize;
+use serde::{Deserialize,Serialize};
 //use crate::models;
 //system time
 //use std::time::SystemTime;
@@ -30,6 +30,12 @@ pub struct Update {
     completed: bool,
     delete: bool,
 }
+#[derive(Deserialize,Clone,Serialize)]
+pub struct ListGet {
+    title: String,
+    id: i32,
+}
+
 
 pub async fn create_list(post_list: web::Json<PostList>) -> Result<String> {
     let current_time = std::time::SystemTime::now();
@@ -127,4 +133,26 @@ pub async fn bulk_update(items: web::Json<Vec<Update>>) -> Result<String> {
         ));
     }
     Ok(updated_items.join(", "))
+}
+fn create_list_response(list: &models::List) -> ListGet {
+    ListGet {
+        title: list.title.clone().unwrap(),
+        id: list.id.clone(),
+    }
+}
+pub async fn get_all_lists(active_only: web::Path<i32>) -> HttpResponse {
+    let active_only = active_only.into_inner();
+    let lists = db::get_all_lists();
+    let mut list_titles = Vec::new();
+    for list in lists.iter() {
+        if active_only==1 && list.completed.expect("completed field is null") {
+            continue;
+        }
+        let list_get = create_list_response(list);
+        list_titles.push(list_get);
+
+    }
+    //Add title:String, id:i32 to json
+    HttpResponse::Ok().json(list_titles)
+
 }
