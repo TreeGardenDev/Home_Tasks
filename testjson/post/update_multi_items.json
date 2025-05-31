@@ -1,0 +1,20 @@
+[
+  {
+    "item_id": 11,
+    "required": true,
+    "completed": false,
+    "delete": false
+  },
+  {
+    "item_id": 21,
+    "required": true,
+    "completed": true,
+    "delete": false
+  },
+  {
+    "item_id": 12,
+    "required": false,
+    "completed": false,
+    "delete": true
+  }
+]
