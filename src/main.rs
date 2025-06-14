@@ -2,25 +2,30 @@ mod models;
 mod utils;
 mod db;
 mod rest;
-//use diesel::prelude::*;
-//use std::time::SystemTime;
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, Result};
+use actix_files::NamedFile;
+use std::path::PathBuf;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+async fn index(_req: HttpRequest) -> Result<NamedFile> {
+    let path: PathBuf = "./static/index.html".parse().unwrap();
+    Ok(NamedFile::open(path)?)
+}
+async  fn viewlists(_req: HttpRequest) -> Result<NamedFile> {
+    let path: PathBuf = "./static/viewlists.html".parse().unwrap();
+    Ok(NamedFile::open(path)?)
 }
 
 async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-
+//serve up htmx files on root
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
-            .service(hello)
+            .route("/", web::get().to(index))
+            .route("/viewlists", web::get().to(viewlists))
             .route("/hey", web::get().to(manual_hello))
             .route("/create_list", web::post().to(rest::create_list))
             .route("/create_item", web::post().to(rest::create_item))
