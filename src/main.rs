@@ -12,7 +12,7 @@ async fn index(_req: HttpRequest) -> Result<NamedFile> {
     Ok(NamedFile::open(path)?)
 }
 async  fn viewlists(_req: HttpRequest) -> Result<NamedFile> {
-    let path: PathBuf = "./htmx/viewlists.html".parse().unwrap();
+    let path: PathBuf = "./htmx/list.html".parse().unwrap();
     Ok(NamedFile::open(path)?)
 }
 
