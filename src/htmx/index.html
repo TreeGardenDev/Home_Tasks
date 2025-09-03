@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic HTMX Template</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <h1>Active Lists</h1>
+    <div id="content"
+        <p>Initial content.</p>
+    </div>
+    <button hx-get="/get_all_lists/1" hx-target="#content" hx-swap="innerHTML">
+            Get Active Lists
+    </button>
+</body>
+</html>

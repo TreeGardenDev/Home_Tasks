@@ -3,21 +3,24 @@ mod utils;
 mod db;
 mod rest;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, Result};
+use actix_web::http::header::{HeaderMap, HeaderName};
 use actix_files::NamedFile;
 use std::path::PathBuf;
 
 async fn index(_req: HttpRequest) -> Result<NamedFile> {
-    let path: PathBuf = "./static/index.html".parse().unwrap();
+    let path: PathBuf = "./htmx/index.html".parse().unwrap();
     Ok(NamedFile::open(path)?)
 }
 async  fn viewlists(_req: HttpRequest) -> Result<NamedFile> {
-    let path: PathBuf = "./static/viewlists.html".parse().unwrap();
+    let path: PathBuf = "./htmx/viewlists.html".parse().unwrap();
     Ok(NamedFile::open(path)?)
 }
 
 async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
+
+
 
 //serve up htmx files on root
 #[actix_web::main]

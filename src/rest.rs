@@ -1,7 +1,10 @@
 //use actix_web::HttpRequest;
-use crate::{db, models};
-use actix_web::{HttpResponse, Result, web};
-use serde::{Deserialize,Serialize};
+use std::path::PathBuf;
+use crate::{db, models, utils};
+use actix_files::NamedFile;
+use actix_web::http::header::{HeaderMap, HeaderName};
+use actix_web::{HttpRequest, HttpResponse, Responder, Result, web};
+use serde::{Deserialize, Serialize};
 //use crate::models;
 //system time
 //use std::time::SystemTime;
@@ -30,12 +33,11 @@ pub struct Update {
     completed: bool,
     delete: bool,
 }
-#[derive(Deserialize,Clone,Serialize)]
+#[derive(Deserialize, Clone, Serialize)]
 pub struct ListGet {
     title: String,
     id: i32,
 }
-
 
 pub async fn create_list(post_list: web::Json<PostList>) -> Result<String> {
     let current_time = std::time::SystemTime::now();
@@ -111,13 +113,51 @@ pub async fn complete_list(list_id: web::Path<i32>) -> Result<String> {
     let id = list_id.clone();
     let _ = db::complete_list(list_id.into_inner());
     Ok(format!("List with ID {} completed", id))
+
 }
-pub async fn query_at_node(Path((list_id,)): Path<(i32,)>) -> HttpResponse {
+
+//return either HttpResponse or Result<NamedFile>
+pub async fn query_at_node(Path((list_id,)): Path<(i32,)>, req: HttpRequest) -> HttpResponse {
     // Start query at list that has list id of list_id
 
     let list = db::get_list_at_id(list_id.clone());
+    let items=&list.items.items;
+    let is_hx_request = utils::is_htmx(&req).await;
+    if is_hx_request {
+        let html_response=items
+            .iter()
+            .map(|items| {
+                format!(
+                "<div class=\"items\">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>{}</td>
+                            <td>{}</td>
+                        </tr>
+                    <tbody>
+                </table>
+            </div>",
+                    items.name, items.id
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("");
 
-    HttpResponse::Ok().json(list)
+        HttpResponse::Ok().body(html_response)
+        
+        //go to /htmx/list.html page
+
+    } else {
+        HttpResponse::Ok().json(list)
+    }
+
+
+}
+async fn go_to_lists(_req: &HttpRequest, html_body:&str) -> Result<NamedFile> {
+    let path: PathBuf = "./htmx/list.html".parse().unwrap();
+    //inject html_body into lists.html which uses htmx to load lists
+    Ok(NamedFile::open(path)?)
 }
 pub async fn bulk_update(items: web::Json<Vec<Update>>) -> Result<String> {
     let mut updated_items = Vec::new();
@@ -126,7 +166,7 @@ pub async fn bulk_update(items: web::Json<Vec<Update>>) -> Result<String> {
         let required = update.required;
         let completed = update.completed;
         let delete = update.delete;
-        let _=db::update_item(item_id, completed, required, delete);
+        let _ = db::update_item(item_id, completed, required, delete);
         updated_items.push(format!(
             "Item with ID {} updated: required={}, completed={}, deleted={}\n",
             item_id, required, completed, delete
@@ -140,19 +180,46 @@ fn create_list_response(list: &models::List) -> ListGet {
         id: list.id.clone(),
     }
 }
-pub async fn get_all_lists(active_only: web::Path<i32>) -> HttpResponse {
+pub async fn get_all_lists(active_only: web::Path<i32>, req: HttpRequest) -> HttpResponse {
     let active_only = active_only.into_inner();
     let lists = db::get_all_lists();
     let mut list_titles = Vec::new();
     for list in lists.iter() {
-        if active_only==1 && list.completed.expect("completed field is null") {
+        if active_only == 1 && list.completed.expect("completed field is null") {
             continue;
         }
         let list_get = create_list_response(list);
         list_titles.push(list_get);
-
     }
+    //get headers from req
     //Add title:String, id:i32 to json
-    HttpResponse::Ok().json(list_titles)
+    //if req.headers().contains_key("HX-Request"){
 
+    let is_hx_request = utils::is_htmx(&req).await;
+    if is_hx_request {
+        let html_response = list_titles
+            .iter()
+            .map(|list| {
+                format!(
+                    "<div class=\"list-item\">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td><button hx-get=\"/get_list/{}\">View</button></td>
+                        </tr>
+                    <tbody>
+                </table>
+            </div>",
+                    list.title, list.id,list.id
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("");
+        HttpResponse::Ok().body(html_response)
+        
+    } else {
+        HttpResponse::Ok().json(list_titles)
+    }
 }
